@@ -18,11 +18,7 @@ class DataBunch():
 
 def get_model(data, lr=0.5, nh=50):
     m = data.train_ds.x.shape[1]
-    model = nn.Sequential(
-        nn.Linear(m, nh),
-        nn.ReLU(),
-        nn.Linear(nh, data.c)
-    )
+    model = nn.Sequential(nn.Linear(m,nh), nn.ReLU(), nn.Linear(nh,data.c))
     return model, optim.SGD(model.parameters(), lr=lr)
 
 class Learner():
@@ -114,7 +110,7 @@ class Runner():
         self.stop=False
 
     def fit(self, epochs, learn):
-        self.epochs,self.learn = epochs,learn
+        self.epochs,self.learn,self.loss = epochs,learn,tensor(0.)
 
         try:
             for cb in self.cbs: cb.set_runner(self)
