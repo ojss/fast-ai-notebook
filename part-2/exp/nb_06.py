@@ -26,19 +26,15 @@ class CudaCallback(Callback):
 
 class BatchTransformXCallback(Callback):
     _order=2
-    def __init__(self, tfm):
-        self.tfm = tfm
-    def begin_batch(self):
-        self.run.xb = self.tfm(self.xb)
+    def __init__(self, tfm): self.tfm = tfm
+    def begin_batch(self): self.run.xb = self.tfm(self.xb)
 
 def view_tfm(*size):
-    def _inner(x):
-        return x.view(*((-1,) + size))
+    def _inner(x): return x.view(*((-1,)+size))
     return _inner
 
 def get_runner(model, data, lr=0.6, cbs=None, opt_func=None, loss_func = F.cross_entropy):
-    if opt_func is None:
-        opt_func = optim.SGD
+    if opt_func is None: opt_func = optim.SGD
     opt = opt_func(model.parameters(), lr=lr)
     learn = Learner(model, opt, loss_func, data)
     return learn, Runner(cb_funcs=listify(cbs))
@@ -46,26 +42,26 @@ def get_runner(model, data, lr=0.6, cbs=None, opt_func=None, loss_func = F.cross
 def children(m): return list(m.children())
 
 class Hook():
-    def __init__(self, m, f):
-        self.hook = m.register_forward_hook(partial(f, self))
+    def __init__(self, m, f): self.hook = m.register_forward_hook(partial(f, self))
     def remove(self): self.hook.remove()
     def __del__(self): self.remove()
 
 def append_stats(hook, mod, inp, outp):
-    if not hasattr(hook,'stats'):
-        hook.stats = ([],[])
+    if not hasattr(hook,'stats'): hook.stats = ([],[])
     means,stds = hook.stats
-    means.append(outp.data.mean())
-    stds .append(outp.data.std())
+    if mod.training:
+        means.append(outp.data.mean())
+        stds .append(outp.data.std())
 
 class ListContainer():
     def __init__(self, items): self.items = listify(items)
     def __getitem__(self, idx):
-        if isinstance(idx, (int,slice)): return self.items[idx]
-        if isinstance(idx[0],bool):
-            assert len(idx)==len(self) # bool mask
-            return [o for m,o in zip(idx,self.items) if m]
-        return [self.items[i] for i in idx]
+        try: return self.items[idx]
+        except TypeError:
+            if isinstance(idx[0],bool):
+                assert len(idx)==len(self) # bool mask
+                return [o for m,o in zip(idx,self.items) if m]
+            return [self.items[i] for i in idx]
     def __len__(self): return len(self.items)
     def __iter__(self): return iter(self.items)
     def __setitem__(self, i, o): self.items[i] = o
